@@ -1,14 +1,8 @@
-# DeepThinking
-在OpwenWebUI中支持类似DeepClaude的思维链和回复模型分离 - 仅支持0.5.6及以上版本 (双模型版本 - Think Model &amp; Base Model)
-
-https://openwebui.com/f/timwhite/deepthinking/
-
-```
 """
 title: Deep Thinking
 author: TimWhite
 description: 在OpwenWebUI中支持类似DeepClaude的思维链和回复模型分离 - 仅支持0.5.6及以上版本 (双模型版本 - Think Model & Base Model)
-version: 1.0.3
+version: 1.0.5
 licence: MIT
 """
 import json
@@ -64,8 +58,8 @@ class Pipe:
         """
         return [
             {
-                "id": self.valves.base_model_DEEPSEEK_API_MODEL,
-                "name": self.valves.base_model_DEEPSEEK_API_MODEL,
+                "id": self.valves.base_model_OPENAI_API_MODEL,
+                "name": self.valves.base_model_OPENAI_API_MODEL,
             }
         ]
 
@@ -84,7 +78,7 @@ class Pipe:
         if not self.valves.think_model_DEEPSEEK_API_KEY:
             yield json.dumps({"error": "未配置 Think Model API 密钥"}, ensure_ascii=False)
             return
-        if not self.valves.base_model_DEEPSEEK_API_KEY:
+        if not self.valves.base_model_OPENAI_API_KEY:
             yield json.dumps({"error": "未配置 Base Model API 密钥"}, ensure_ascii=False)
             return
 
@@ -98,7 +92,7 @@ class Pipe:
             "model": self.valves.think_model_DEEPSEEK_API_MODEL, # 使用 Think Model
         }
 
-        思维链内容 = ""  # 用于保存从 Think Model 获取的思维链内容
+        think_content = ""  # 用于保存从 Think Model 获取的思维链内容
 
         try: # Think Model Request 的 try 代码块开始
             async with httpx.AsyncClient(http2=True) as client: # 使用 http2 优化连接
@@ -153,7 +147,7 @@ class Pipe:
                                     yield "</think>" # yield 标记
                                     await asyncio.sleep(0.1) # 适当延时
                                     yield "\n" # yield 换行
-                            思维链内容 += content # 累加思维链内容
+                            think_content += content # 累加思维链内容
                             yield content #  <- 重要修改：这里仍然需要 yield 思维链内容，以便在 UI 上显示
 
         except Exception as e: # Think Model Request 的 try 代码块异常处理
@@ -165,16 +159,16 @@ class Pipe:
 
         # --------------------- 步骤 2: 请求 Base Model 获取最终答案 ---------------------
         base_model_headers = {
-            "Authorization": f"Bearer {self.valves.base_model_DEEPSEEK_API_KEY}",
+            "Authorization": f"Bearer {self.valves.base_model_OPENAI_API_KEY}",
             "Content-Type": "application/json",
         }
 
         # 将思维链内容添加到发送给 Base Model 的消息列表中
-        base_model_messages = user_messages + [{"role": "assistant", "content": 思维链内容}] # 构造新的消息列表，包含用户消息和思维链
+        base_model_messages = user_messages + [{"role": "assistant", "content": f"<think>\n{think_content}\n</think>"}] # 构造新的消息列表，包含用户消息和思维链
 
         base_model_payload = {
             **body,
-            "model": self.valves.base_model_DEEPSEEK_API_MODEL, # 使用 Base Model
+            "model": self.valves.base_model_OPENAI_API_MODEL, # 使用 Base Model
             "messages": base_model_messages # 使用包含思维链的消息列表
         }
 
@@ -182,7 +176,7 @@ class Pipe:
             async with httpx.AsyncClient(http2=True) as client: # 使用 http2 优化连接
                 async with client.stream( # 使用 stream 方法获取 SSE 数据流
                     "POST",
-                    f"{self.valves.base_model_DEEPSEEK_API_BASE_URL}/chat/completions", # Base Model API Endpoint
+                    f"{self.valves.base_model_OPENAI_API_BASE_URL}/chat/completions", # Base Model API Endpoint
                     json=base_model_payload,
                     headers=base_model_headers,
                     timeout=300, # 设置超时时间
@@ -268,4 +262,3 @@ class Pipe:
         """
         err_type = type(e).__name__ # 获取异常类型名
         return json.dumps({"error": f"{err_type}: {str(e)}"}, ensure_ascii=False) # 返回 JSON 格式异常信息
-```
