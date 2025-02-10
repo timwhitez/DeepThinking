@@ -7,7 +7,7 @@ https://openwebui.com/f/timwhite/deepthinking/
 """
 title: Deep Thinking
 author: TimWhite
-description: 在OpwenWebUI中支持类似DeepClaude的思维链和回复模型分离 - 仅支持0.5.6及以上版本 (双模型版本 - Think Model & Base Model)
+description: 在OpwenWebUI中支持类似DeepClaude的思维链和回复模型分离 - 仅支持0.5.6及以上版本
 version: 1.0.5
 licence: MIT
 """
