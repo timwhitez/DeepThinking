@@ -8,7 +8,7 @@ https://openwebui.com/f/timwhite/deepthinking/
 title: Deep Thinking
 author: TimWhite
 description: 在OpwenWebUI中支持类似DeepClaude的思维链和回复模型分离 - 仅支持0.5.6及以上版本 (双模型版本 - Think Model & Base Model)
-version: 1.0.0
+version: 1.0.3
 licence: MIT
 """
 import json
@@ -35,14 +35,14 @@ class Pipe:
             default="deepseek-reasoner",
             description="Think Model - API请求的模型名称，默认为 deepseek-reasoner (用于生成思维链)",
         )
-        base_model_DEEPSEEK_API_BASE_URL: str = Field(
+        base_model_OPENAI_API_BASE_URL: str = Field(
             default="https://api.openai.com/v1",
             description="Base Model - OpenAI API的基础请求地址, 也可以是其他OpenAI格式api",
         )
-        base_model_DEEPSEEK_API_KEY: str = Field(
+        base_model_OPENAI_API_KEY: str = Field(
             default="", description="Base Model - 用于身份验证的API密钥，可从控制台获取"
         )
-        base_model_DEEPSEEK_API_MODEL: str = Field(
+        base_model_OPENAI_API_MODEL: str = Field(
             default="gpt-4o-mini",
             description="Base Model - API请求的模型名称，默认为 gpt-4o-mini (用于生成最终答案)",
         )
@@ -98,7 +98,7 @@ class Pipe:
             "model": self.valves.think_model_DEEPSEEK_API_MODEL, # 使用 Think Model
         }
 
-        think_content = ""  # 用于保存从 Think Model 获取的思维链内容
+        思维链内容 = ""  # 用于保存从 Think Model 获取的思维链内容
 
         try: # Think Model Request 的 try 代码块开始
             async with httpx.AsyncClient(http2=True) as client: # 使用 http2 优化连接
@@ -153,7 +153,7 @@ class Pipe:
                                     yield "</think>" # yield 标记
                                     await asyncio.sleep(0.1) # 适当延时
                                     yield "\n" # yield 换行
-                            think_content += content # 累加思维链内容
+                            思维链内容 += content # 累加思维链内容
                             yield content #  <- 重要修改：这里仍然需要 yield 思维链内容，以便在 UI 上显示
 
         except Exception as e: # Think Model Request 的 try 代码块异常处理
@@ -170,7 +170,7 @@ class Pipe:
         }
 
         # 将思维链内容添加到发送给 Base Model 的消息列表中
-        base_model_messages = user_messages + [{"role": "assistant", "content": f"<think>\n{think_content}\n</think>"}] # 使用包含思维链的消息列表, 并添加标签
+        base_model_messages = user_messages + [{"role": "assistant", "content": 思维链内容}] # 构造新的消息列表，包含用户消息和思维链
 
         base_model_payload = {
             **body,
