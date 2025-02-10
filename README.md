@@ -1,3 +1,9 @@
+# DeepThinking
+在OpwenWebUI中支持类似DeepClaude的思维链和回复模型分离 - 仅支持0.5.6及以上版本 (双模型版本 - Think Model &amp; Base Model)
+
+https://openwebui.com/f/timwhite/deepthinking/
+
+```
 """
 title: Deep Thinking
 author: TimWhite
@@ -262,3 +268,4 @@ class Pipe:
         """
         err_type = type(e).__name__ # 获取异常类型名
         return json.dumps({"error": f"{err_type}: {str(e)}"}, ensure_ascii=False) # 返回 JSON 格式异常信息
+```
