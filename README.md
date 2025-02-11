@@ -8,7 +8,7 @@ https://openwebui.com/f/timwhite/deepthinking/
 title: Deep Thinking
 author: TimWhite
 description: 在OpwenWebUI中支持类似DeepClaude的思维链和回复模型分离 - 仅支持0.5.6及以上版本
-version: 1.0.5
+version: 1.0.6
 licence: MIT
 """
 import json
@@ -137,24 +137,24 @@ class Pipe:
                             if state_output == "<think>": # 如果是开始思考状态，yield 换行符
                                 yield "\n"
 
-                        content = self._process_content(choice["delta"]) # 处理内容 (提取 reasoning_content 或 content)
-                        if content: # 如果提取到内容
-                            if content.startswith("<think>"): # 处理 thinking 开始标记
-                                match = re.match(r"^<think>", content)
+                        reasoning_content = choice.get("delta", {}).get("reasoning_content", "") # 提取 reasoning_content
+                        if reasoning_content: # 如果提取到内容
+                            if reasoning_content.startswith("<think>"): # 处理 thinking 开始标记
+                                match = re.match(r"^<think>", reasoning_content)
                                 if match:
-                                    content = re.sub(r"^<think>", "", content) # 移除标记
+                                    reasoning_content = re.sub(r"^<think>", "", reasoning_content) # 移除标记
                                     yield "<think>" # yield 标记
                                     await asyncio.sleep(0.1) # 适当延时
                                     yield "\n" # yield 换行
-                            elif content.startswith("</think>"): # 处理 thinking 结束标记
-                                match = re.match(r"^</think>", content)
+                            elif reasoning_content.startswith("</think>"): # 处理 thinking 结束标记
+                                match = re.match(r"^</think>", reasoning_content)
                                 if match:
-                                    content = re.sub(r"^</think>", "", content) # 移除标记
+                                    reasoning_content = re.sub(r"^</think>", "", reasoning_content) # 移除标记
                                     yield "</think>" # yield 标记
                                     await asyncio.sleep(0.1) # 适当延时
                                     yield "\n" # yield 换行
-                            think_content += content # 累加思维链内容
-                            yield content #  <- 重要修改：这里仍然需要 yield 思维链内容，以便在 UI 上显示
+                            think_content += reasoning_content # 累加思维链内容
+                            yield reasoning_content #  <- 重要修改：这里仍然需要 yield 思维链内容，以便在 UI 上显示
 
         except Exception as e: # Think Model Request 的 try 代码块异常处理
             yield self._format_exception(e) # 格式化异常信息并 yield
@@ -242,9 +242,9 @@ class Pipe:
     def _process_content(self, delta: dict) -> str:
         """
         处理内容.
-        优先返回 reasoning_content (思维链内容)，如果 reasoning_content 为空，则返回 content (最终答案内容).
+        返回 content (最终答案内容).
         """
-        return delta.get("reasoning_content", "") or delta.get("content", "")
+        return delta.get("content", "")
 
     def _format_error(self, status_code: int, error: bytes) -> str:
         """
